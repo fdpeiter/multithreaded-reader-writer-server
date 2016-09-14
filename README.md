@@ -1,6 +1,4 @@
-# producer-worker-socket
 A multithreaded socket server and client with work queue
-https://github.com/fdpeiter/producer-worker-socket
 
 This project consists of two programs:
 
@@ -12,10 +10,7 @@ This internal variable keeps track of the number of the writes performed. Each r
 
 Usage:
 
-server <ip_address> <port>
-client <ip_address> <port> <num_connections> <num_threads>
+server
+client <num_connections> <num_threads>
 
 The num_connections must be a pair value, so it can produce the same amount of readers and writers.
-
-
-WIP
