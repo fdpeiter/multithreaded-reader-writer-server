@@ -14,12 +14,15 @@ int total = 0;
 sem_t reader_sem, db_sem;
 int readCount = 0;
 
+void* reader(int* result);
+void* writer(int* result);
+
 void* handle_connection(void *arg)
 {
     int client_sock = *(int*)arg;
     int server_value = 0;
     int client_type = 0;
-    if (client_type = recv(client_sock, &server_value, sizeof(int), 0) < sizeof(int)){
+    if ((client_type = recv(client_sock, &server_value, sizeof(int), 0)) < sizeof(int)){
         perror("receive: ");
     }
     else{
@@ -30,44 +33,39 @@ void* handle_connection(void *arg)
         else{
             reader(&result);
         }
-        if (send(sockfd,&result,1,0) <0)
+        if (send(client_sock,&result,1,0) <0)
             perror("send: ");
     }
-    
+    return NULL;
 }
 
 void* reader(int* result){
     
-    readCount++;
-    int tempResult = 0;
-    
-    if (readCount == 1){
-        sem_wait(&db_sem);
-    }
-    
-    sem_post(&reader_sem);
-    tempResult = total;
     sem_wait(&reader_sem);
-    
-    readCount--;
-    if(readCount==0){
-        sem_post(&db_sem);
-    }
-    sem_post(&reader_sem);
-    &result = total;
-    
+        readCount++;
+        if (readCount == 1){
+            sem_wait(&db_sem);
+        }
+        sem_post(&reader_sem);
+        result = &total;
+        sem_wait(&reader_sem);
+        readCount--;
+        if(readCount==0){
+            sem_post(&db_sem);
+        }
+        sem_post(&reader_sem);
 }
 void* writer(int* result){
     sem_wait(&db_sem);
-    total++;
-    &result = total;
+        total++;
+        result = &total;
     sem_post(&db_sem);
 }
 
 int main(int argc, char *argv[])
 {
-    sem_init(&readCountAccess,0,1);
-    sem_init(&databaseAccess,0,1);
+    sem_init(&reader_sem,0,1);
+    sem_init(&db_sem,0,1);
     int listenfd = 0, connfd = 0;
     struct sockaddr_in serv_addr, clientaddr;
     char sendBuff[1025];
@@ -101,10 +99,6 @@ int main(int argc, char *argv[])
     {
         /* Passo 5 - Aguardar conexão do cliente.  */
         sz = sizeof(clientaddr);
-        if ((connfd = accept(listenfd, (struct sockaddr*)&clientaddr, &sz)) < 0){
-            perror("accept: ");
-            continue;
-        }
         pthread_t client_threadid;
         while((connfd = accept(listenfd, (struct sockaddr*)&clientaddr, &sz)) != -1)
         {

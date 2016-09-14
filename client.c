@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <arpa/inet.h> 
+#include <pthread.h>
 #include "queue.h"
 
 struct user_addr{
@@ -56,6 +57,7 @@ void * producer(int size){
             Enqueue(Q,0);
             Enqueue(Q,1);
 	}
+    return NULL;
 }
 
 void * consumer(struct sockaddr_in serv_addr){
@@ -64,6 +66,7 @@ void * consumer(struct sockaddr_in serv_addr){
             Dequeue(Q);
             communicate(serv_addr, type);
 	}
+    return NULL;
 }
 
 int main(int argc, char *argv[])
@@ -101,8 +104,9 @@ int main(int argc, char *argv[])
     }
     for(i=0; i<numthr; i++){
         if(pthread_create(&con[i], NULL, consumer, &serv_addr)) {
-	    fprintf(stderr, "Error creating thread\n");
-	    return 2;
+            fprintf(stderr, "Error creating thread\n");
+            return 2;
+        }
 	}
     if(pthread_join(prod, NULL)) {
         fprintf(stderr, "Error joining thread\n");
