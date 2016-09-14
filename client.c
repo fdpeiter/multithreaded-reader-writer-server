@@ -11,25 +11,30 @@
 #include <pthread.h>
 #include "queue.h"
 
-struct user_addr{
-    char* user_ip;
-    char* user_port;
-};
-
 int running = 1;
 Queue* Q;
 
 
-int communicate(struct sockaddr_in serv_addr,  int type){
+int communicate(int type){
     int sockfd = 0;
+    struct sockaddr_in serv_addr;
+    
     /* Passo 1 - Criar socket */
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         perror("socket: ");
         exit(1);
     }
-
-    if( connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
+    /* Passo 2 - Configura struct sockaddr_in */
+    memset(&serv_addr, '0', sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(5555);
+    /* converte Ip em formato string para o formato exigido pela struct sockaddr_in*/
+    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0){
+        printf("\n inet_pton error occured\n");
+        exit(1);
+    }
+    if( connect(sockfd, (struct sockaddr_in*) &serv_addr, sizeof(serv_addr)) < 0){
         perror("connect: ");
         exit(1);
     }
@@ -60,11 +65,11 @@ void * producer(int size){
     return NULL;
 }
 
-void * consumer(struct sockaddr_in serv_addr){
+void * consumer(){
 	while(running){
             int type = front(Q);
             Dequeue(Q);
-            communicate(serv_addr, type);
+            communicate(type);
 	}
     return NULL;
 }
@@ -75,35 +80,27 @@ int main(int argc, char *argv[])
     int sockfd = 0, n = 0, numthr = 0;
     pthread_t prod, *con;
     char recvBuff[1024];
-    struct sockaddr_in serv_addr; 
 
-    if(argc != 5)
+    if(argc != 3)
     {
-        printf("\n Usage: %s <ip of server> <port> <num_workers> <num_threads>\n",argv[0]);
+        printf("\n Usage: %s <num_workers> <num_threads>\n",argv[0]);
         return 1;
     }
-    if(atoi(argv[4]) % 2 != 0){
+    if(atoi(argv[3]) % 2 != 0){
         printf("\n Num of workers must be even!\n");
         return 1;
     }
-    Q = createQueue(atoi(argv[3]));
-    /* Passo 2 - Configura struct sockaddr_in */
-    memset(&serv_addr, '0', sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(atoi(argv[2]));
-    /* converte Ip em formato string para o formato exigido pela struct sockaddr_in*/
-    if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0){
-        printf("\n inet_pton error occured\n");
-        exit(1);
-    }
-    numthr = atoi(argv[4]);
+    int num_workers = 0;
+    num_workers = (atoi(argv[2]));
+    Q = createQueue(num_workers);
+    numthr = atoi(argv[3]);
     con = (pthread_t *)malloc(numthr * sizeof(pthread_t));
-    if(pthread_create(&prod, NULL, producer, argv[3])) {
+    if(pthread_create(&prod, NULL, producer, num_workers)) {
         fprintf(stderr, "Error creating thread\n");
 	return 1;
     }
     for(i=0; i<numthr; i++){
-        if(pthread_create(&con[i], NULL, consumer, &serv_addr)) {
+        if(pthread_create(&con[i], NULL, consumer, NULL)) {
             fprintf(stderr, "Error creating thread\n");
             return 2;
         }

@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(5000); 
+    serv_addr.sin_port = htons(5555);
     
     /* Passo 3 - Associar socket com a estrutura sockaddr_in     */
     if (bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0){
@@ -93,8 +93,7 @@ int main(int argc, char *argv[])
     }
 
     /* Passo 4 - Tornar o servidor ativo  */
-    listen(listenfd, 10); 
-
+    listen(listenfd, 10);
     while(1)
     {
         /* Passo 5 - Aguardar conexão do cliente.  */
@@ -102,6 +101,7 @@ int main(int argc, char *argv[])
         pthread_t client_threadid;
         while((connfd = accept(listenfd, (struct sockaddr*)&clientaddr, &sz)) != -1)
         {
+            printf("Creating thread for connection");
             pthread_create(&client_threadid,NULL,handle_connection, &connfd);
         }
         close(connfd);
