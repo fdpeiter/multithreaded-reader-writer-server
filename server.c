@@ -16,56 +16,7 @@ int readCount = 0;
 
 void* reader(int* result);
 void* writer(int* result);
-
-void* handle_connection(void *arg)
-{
-    printf("4");
-    int client_sock = *(int*)arg;
-    int server_value = 0;
-    int client_type = 0;
-    if ((client_type = recv(client_sock, &server_value, sizeof(int), 0)) < sizeof(int)){
-        perror("receive: ");
-    }
-    else{
-        printf("5");
-        int result = 0;
-        if (client_type){
-            writer(&result);
-        }
-        else{
-            reader(&result);
-        }
-        if (send(client_sock,&result,1,0) <0)
-            perror("send: ");
-    }
-    return NULL;
-}
-
-void* reader(int* result){
-    printf("6");
-    sem_wait(&reader_sem);
-        readCount++;
-        if (readCount == 1){
-            sem_wait(&db_sem);
-        }
-        sem_post(&reader_sem);
-        result = &total;
-        sem_wait(&reader_sem);
-        readCount--;
-        if(readCount==0){
-            sem_post(&db_sem);
-        }
-        sem_post(&reader_sem);
-    return 0;
-}
-void* writer(int* result){
-    printf("7");
-    sem_wait(&db_sem);
-        total++;
-        result = &total;
-    sem_post(&db_sem);
-    return 0;
-}
+void* handle_connection(void *arg);
 
 int main(int argc, char *argv[])
 {
@@ -77,10 +28,9 @@ int main(int argc, char *argv[])
     char sendBuff[1025];
     socklen_t sz;
 
-
     memset(sendBuff, '0', sizeof(sendBuff)); 
     printf("0.0");
-    /* Passo 1 - Criar Socket */
+    /* Passo 1 - Criar Socket *//*
     if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 	  perror("socket: ");
 	  exit(1);
@@ -116,5 +66,55 @@ int main(int argc, char *argv[])
         }
         close(connfd);
      }
+}
+
+void* handle_connection(void *arg)
+{
+    printf("4");
+    int client_sock = *(int*)arg;
+    int server_value = 0;
+    int client_type = 0;
+    if ((client_type = recv(client_sock, &server_value, sizeof(int), 0)) < sizeof(int)){
+        perror("receive: ");
+    }
+    else{
+        printf("5");
+        int result = 0;
+        if (client_type){
+            writer(&result);
+        }
+        else{
+            reader(&result);
+        }
+        if (send(client_sock,&result,1,0) <0)
+            perror("send: ");
+    }
+    return NULL;
+}
+
+void* reader(int* result){
+    printf("6");
+    sem_wait(&reader_sem);
+    readCount++;
+    if (readCount == 1){
+        sem_wait(&db_sem);
+    }
+    sem_post(&reader_sem);
+    result = &total;
+    sem_wait(&reader_sem);
+    readCount--;
+    if(readCount==0){
+        sem_post(&db_sem);
+    }
+    sem_post(&reader_sem);
+    return 0;
+}
+void* writer(int* result){
+    printf("7");
+    sem_wait(&db_sem);
+    total++;
+    result = &total;
+    sem_post(&db_sem);
+    return 0;
 }
 
